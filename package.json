@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "migrate": "drizzle-kit migrate",
-    "migrate:generate": "drizzle-kit generate:migration",
+    "migrate:generate": "drizzle-kit generate",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx"
   },
   "dependencies": {
@@ -22,6 +22,7 @@
   "devDependencies": {
     "@types/node": "20.4.2",
     "@types/react": "19.2.16",
+    "drizzle-orm-pg": "^0.16.3",
     "eslint": "8.46.0",
     "eslint-config-next": "13.4.10",
     "typescript": "5.3.3"
