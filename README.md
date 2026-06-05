@@ -22,3 +22,5 @@ npm run dev
 ```bash
 npm run migrate
 ```
+
+PR: include scaffold details
