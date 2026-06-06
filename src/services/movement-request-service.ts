@@ -1,5 +1,5 @@
 import { db } from '../db'
-import { movement_requests } from '../db/schema'
+import { movement_requests, status_history } from '../db/schema'
 import { eq } from 'drizzle-orm'
 
 function parseDdMmYyyy(input: string): string {
@@ -15,6 +15,7 @@ export type CreateMovementRequestInput = {
   movement_type: string
   start_date: string
   end_date: string
+  comment?: string
 }
 
 export type UpdateMovementRequestInput = {
@@ -25,18 +26,48 @@ export type UpdateMovementRequestInput = {
   end_date?: string
   status?: string
   current_comment?: string
+  comment?: string
+}
+
+async function createStatusHistory(
+  requestId: number,
+  status: string,
+  comment: string,
+  changedBy: string = 'Admin'
+) {
+  return await db.insert(status_history).values({
+    request_id: requestId,
+    status,
+    comment,
+    changed_by: changedBy,
+  })
 }
 
 export async function createMovementRequest(data: CreateMovementRequestInput) {
   const start_date = parseDdMmYyyy(data.start_date)
   const end_date = parseDdMmYyyy(data.end_date)
-  const res = await db.insert(movement_requests).values({
-    employee_id: data.employee_id,
-    movement_type: data.movement_type,
-    start_date,
-    end_date,
-  }).returning()
-  return res
+  
+  return await db.transaction(async (tx) => {
+    const res = await tx.insert(movement_requests).values({
+      employee_id: data.employee_id,
+      movement_type: data.movement_type,
+      start_date,
+      end_date,
+    }).returning()
+    
+    if (res.length > 0) {
+      const requestId = res[0].id
+      const comment = data.comment || 'Movement request created'
+      await tx.insert(status_history).values({
+        request_id: requestId,
+        status: 'Pending',
+        comment,
+        changed_by: 'Admin',
+      })
+    }
+    
+    return res
+  })
 }
 
 export async function updateMovementRequest(data: UpdateMovementRequestInput) {
@@ -47,16 +78,51 @@ export async function updateMovementRequest(data: UpdateMovementRequestInput) {
   if (data.end_date !== undefined) setValues.end_date = parseDdMmYyyy(data.end_date)
   if (data.status !== undefined) setValues.status = data.status
   if (data.current_comment !== undefined) setValues.current_comment = data.current_comment
-  const res = await db.update(movement_requests).set(setValues).where(eq(movement_requests.id, data.id)).returning()
-  return res
+  
+  return await db.transaction(async (tx) => {
+    const res = await tx.update(movement_requests).set(setValues).where(eq(movement_requests.id, data.id)).returning()
+    
+    // If status changed, record it in status_history
+    if (data.status !== undefined) {
+      const comment = data.comment || data.current_comment || 'Status updated'
+      await tx.insert(status_history).values({
+        request_id: data.id,
+        status: data.status,
+        comment,
+        changed_by: 'Admin',
+      })
+    }
+    
+    return res
+  })
 }
 
 export async function getAllMovementRequests() {
-  const res = await db.select().from(movement_requests)
-  return res
+  const requests = await db.select().from(movement_requests)
+  
+  // Fetch status_history for each request
+  const requestsWithHistory = await Promise.all(
+    requests.map(async (request) => {
+      const history = await db.select().from(status_history).where(eq(status_history.request_id, request.id))
+      return {
+        ...request,
+        status_history: history,
+      }
+    })
+  )
+  
+  return requestsWithHistory
 }
 
 export async function getMovementRequestById(id: number) {
   const res = await db.select().from(movement_requests).where(eq(movement_requests.id, id))
-  return res
+  
+  if (res.length === 0) return []
+  
+  const history = await db.select().from(status_history).where(eq(status_history.request_id, id))
+  
+  return [{
+    ...res[0],
+    status_history: history,
+  }]
 }

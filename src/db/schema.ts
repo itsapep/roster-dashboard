@@ -30,3 +30,12 @@ export const movement_requests = pgTable('movement_requests', {
   current_comment: text('current_comment'),
   created_at: timestamp('created_at').defaultNow(),
 })
+
+export const status_history = pgTable('status_history', {
+  id: serial('id').primaryKey(),
+  request_id: integer('request_id').references(() => movement_requests.id, { onDelete: 'cascade' }).notNull(),
+  status: text('status').notNull(),
+  changed_by: text('changed_by').default('Admin'),
+  comment: text('comment').notNull(),
+  created_at: timestamp('created_at').defaultNow(),
+})

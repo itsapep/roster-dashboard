@@ -21,8 +21,8 @@
   },
   "devDependencies": {
     "@types/node": "20.4.2",
+    "@types/pg": "^8.20.0",
     "@types/react": "19.2.16",
-    "drizzle-orm-pg": "^0.16.3",
     "eslint": "8.46.0",
     "eslint-config-next": "13.4.10",
     "typescript": "5.3.3"
