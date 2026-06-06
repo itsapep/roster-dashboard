@@ -4,8 +4,6 @@ import {
   updateMovementRequest,
   getAllMovementRequests,
   getMovementRequestById,
-  getMovementRequestsByEmployeeId,
-  getPendingMovementRequests,
 } from '../services/movement-request-service'
 
 export async function postHandler(req: NextApiRequest, res: NextApiResponse) {
@@ -55,18 +53,19 @@ export async function getAllHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { employee_id, status } = req.query
 
-    if (employee_id) {
-      const data = await getMovementRequestsByEmployeeId(Number(employee_id))
-      return res.status(200).json({ message: 'Success get movement requests by employee id', data })
+    const empIdStr = Array.isArray(employee_id) ? employee_id[0] : employee_id
+    const statusStr = Array.isArray(status) ? status[0] : status
+
+    const filters: { employee_id?: number; status?: string } = {}
+    if (empIdStr) {
+      filters.employee_id = Number(empIdStr)
+    }
+    if (statusStr) {
+      filters.status = statusStr
     }
 
-    if (status === 'Pending') {
-      const data = await getPendingMovementRequests()
-      return res.status(200).json({ message: 'Success get pending movement requests', data })
-    }
-
-    const data = await getAllMovementRequests()
-    return res.status(200).json({ message: 'Success get all movement request', data })
+    const data = await getAllMovementRequests(filters)
+    return res.status(200).json({ message: 'Success get movement requests', data })
   } catch (err) {
     console.error('get all movement request error', err)
     return res.status(500).json({ message: 'Error get all movement request' })
@@ -75,7 +74,7 @@ export async function getAllHandler(req: NextApiRequest, res: NextApiResponse) {
 
 export async function getByIdHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const id = Number(req.query.id)
+    const id = Number(Array.isArray(req.query.id) ? req.query.id[0] : req.query.id)
     if (!id) {
       return res.status(400).json({ message: 'Missing id' })
     }

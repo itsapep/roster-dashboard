@@ -1,6 +1,6 @@
 import { db } from '../db'
 import { movement_requests, status_history } from '../db/schema'
-import { eq, inArray } from 'drizzle-orm'
+import { eq, inArray, and } from 'drizzle-orm'
 
 function parseDdMmYyyy(input: string): string {
   if (!/^[0-9]{8}$/.test(input)) throw new Error('invalid date format')
@@ -119,24 +119,20 @@ async function attachStatusHistory(requests: Array<{ id: number; [key: string]: 
   }))
 }
 
-export async function getAllMovementRequests() {
-  const requests = await db.select().from(movement_requests)
-  return await attachStatusHistory(requests)
-}
+export async function getAllMovementRequests(filters?: { employee_id?: number; status?: string }) {
+  const conditions = []
+  if (filters?.employee_id !== undefined) {
+    conditions.push(eq(movement_requests.employee_id, filters.employee_id))
+  }
+  if (filters?.status !== undefined) {
+    conditions.push(eq(movement_requests.status, filters.status))
+  }
 
-export async function getMovementRequestsByEmployeeId(employeeId: number) {
   const requests = await db
     .select()
     .from(movement_requests)
-    .where(eq(movement_requests.employee_id, employeeId))
-  return await attachStatusHistory(requests)
-}
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
 
-export async function getPendingMovementRequests() {
-  const requests = await db
-    .select()
-    .from(movement_requests)
-    .where(eq(movement_requests.status, 'Pending'))
   return await attachStatusHistory(requests)
 }
 

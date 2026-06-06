@@ -28,7 +28,8 @@ export async function getAllHandler(req: NextApiRequest, res: NextApiResponse){
     const { employee_id } = req.query
 
     if (employee_id) {
-      const data = await getRosterAnchorByEmployeeId(Number(employee_id))
+      const empIdStr = Array.isArray(employee_id) ? employee_id[0] : employee_id;
+      const data = await getRosterAnchorByEmployeeId(Number(empIdStr))
       return res.status(200).json({ message: 'Success get roster anchor by employee id', data })
     }
 
