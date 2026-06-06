@@ -2,13 +2,15 @@
   "name": "roster-dashboard",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "migrate": "drizzle-kit migrate",
     "migrate:generate": "drizzle-kit generate",
-    "lint": "eslint . --ext .ts,.tsx,.js,.jsx"
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "db:seed": "ts-node src/db/seed.ts"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
@@ -25,6 +27,7 @@
     "@types/react": "19.2.16",
     "eslint": "8.46.0",
     "eslint-config-next": "13.4.10",
+    "ts-node": "^10.9.2",
     "typescript": "5.3.3"
   }
 }

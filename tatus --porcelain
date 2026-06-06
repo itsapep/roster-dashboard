@@ -1,0 +1,19 @@
+ id |     name     | department  |         role          |         created_at         
+----+--------------+-------------+-----------------------+----------------------------
+ 17 | Alice Ramos  | Operations  | Operator              | 2026-06-06 18:17:11.958383
+ 18 | Ben Carter   | Operations  | Supervisor            | 2026-06-06 18:17:11.958383
+ 19 | Clara Ng     | Operations  | Manager               | 2026-06-06 18:17:11.958383
+ 20 | Diego Silva  | Logistics   | Logistics Coordinator | 2026-06-06 18:17:11.958383
+ 21 | Eva Ma       | Logistics   | Driver                | 2026-06-06 18:17:11.958383
+ 22 | Frank Ortiz  | Logistics   | Loader                | 2026-06-06 18:17:11.958383
+ 23 | Gina Park    | Engineering | Maintenance Engineer  | 2026-06-06 18:17:11.958383
+ 24 | Hiro Tanaka  | Engineering | Technician            | 2026-06-06 18:17:11.958383
+ 25 | Ivy Singh    | Engineering | Technician            | 2026-06-06 18:17:11.958383
+ 26 | James Lee    | Operations  | Operator              | 2026-06-06 18:17:11.958383
+ 27 | Khalid Noor  | Logistics   | Driver                | 2026-06-06 18:17:11.958383
+ 28 | Lena Ortiz   | Engineering | Maintenance Engineer  | 2026-06-06 18:17:11.958383
+ 29 | Marta Cruz   | Operations  | Supervisor            | 2026-06-06 18:17:11.958383
+ 30 | Nico Rossi   | Logistics   | Coordinator           | 2026-06-06 18:17:11.958383
+ 31 | Olga Petrova | Engineering | Technician            | 2026-06-06 18:17:11.958383
+(15 rows)
+
