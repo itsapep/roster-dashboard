@@ -8,17 +8,18 @@ import {
 
 export async function postHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { employee_id, movement_type, start_date, end_date } = req.body
+    const { employee_id, movement_type, start_date, end_date, comment } = req.body
     if (!employee_id || !movement_type || !start_date || !end_date) {
       return res.status(400).json({ message: 'Missing fields' })
     }
-    await createMovementRequest({
+    const result = await createMovementRequest({
       employee_id: Number(employee_id),
       movement_type,
       start_date,
       end_date,
+      comment,
     })
-    return res.status(201).json({ message: 'Success create movement request' })
+    return res.status(201).json({ message: 'Success create movement request', data: result })
   } catch (err) {
     console.error('create movement request error', err)
     return res.status(500).json({ message: 'Error create movement request' })
@@ -27,11 +28,11 @@ export async function postHandler(req: NextApiRequest, res: NextApiResponse) {
 
 export async function putHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { id, employee_id, movement_type, start_date, end_date, status, current_comment } = req.body
+    const { id, employee_id, movement_type, start_date, end_date, status, current_comment, comment } = req.body
     if (!id) {
       return res.status(400).json({ message: 'Missing id' })
     }
-    await updateMovementRequest({
+    const result = await updateMovementRequest({
       id: Number(id),
       employee_id: employee_id ? Number(employee_id) : undefined,
       movement_type,
@@ -39,8 +40,9 @@ export async function putHandler(req: NextApiRequest, res: NextApiResponse) {
       end_date,
       status,
       current_comment,
+      comment,
     })
-    return res.status(200).json({ message: 'Success update movement request' })
+    return res.status(200).json({ message: 'Success update movement request', data: result })
   } catch (err) {
     console.error('update movement request error', err)
     return res.status(500).json({ message: 'Error update movement request' })
@@ -64,7 +66,7 @@ export async function getByIdHandler(req: NextApiRequest, res: NextApiResponse) 
       return res.status(400).json({ message: 'Missing id' })
     }
     const data = await getMovementRequestById(id)
-    return res.status(200).json({ message: 'Success get movement request by id', data })
+    return res.status(200).json({ message: 'Success get movement request by id', data: data[0] || null })
   } catch (err) {
     console.error('get movement request by id error', err)
     return res.status(500).json({ message: 'Error get movement request by id' })

@@ -1,6 +1,11 @@
 {
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
+  "/api/employees": "pages/api/employees.js",
+  "/api/movement-request/[id]": "pages/api/movement-request/[id].js",
+  "/api/movement-request": "pages/api/movement-request.js",
+  "/api/roster-anchor": "pages/api/roster-anchor.js",
+  "/api/users": "pages/api/users.js",
   "/_document": "pages/_document.js",
-  "/api/roster-anchor": "pages/api/roster-anchor.js"
+  "/404": "pages/404.html"
 }
