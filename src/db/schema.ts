@@ -19,3 +19,14 @@ export const roster_anchors = pgTable('roster_anchors', {
   anchor_date: date('anchor_date').notNull(),
   created_at: timestamp('created_at').defaultNow(),
 })
+
+export const movement_requests = pgTable('movement_requests', {
+  id: serial('id').primaryKey(),
+  employee_id: integer('employee_id').references(() => employees.id),
+  movement_type: text('movement_type'),
+  start_date: date('start_date'),
+  end_date: date('end_date'),
+  status: text('status').default('Pending'),
+  current_comment: text('current_comment'),
+  created_at: timestamp('created_at').defaultNow(),
+})

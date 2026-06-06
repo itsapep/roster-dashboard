@@ -14,13 +14,13 @@ function parseDdMmYyyy(input: string): string {
 
 export async function createRosterAnchor({ employee_id, anchor_date }:{employee_id:number, anchor_date:string}){
   const iso = parseDdMmYyyy(anchor_date)
-  const res = await db.insert(roster_anchors).values({ employee_id, anchor_date: new Date(iso) }).returning();
+  const res = await db.insert(roster_anchors).values({ employee_id, anchor_date: iso }).returning();
   return res
 }
 
 export async function updateRosterAnchor({ employee_id, anchor_date }:{employee_id:number, anchor_date:string}){
   const iso = parseDdMmYyyy(anchor_date)
-  const res = await db.update(roster_anchors).set({ anchor_date: new Date(iso) }).where(eq(roster_anchors.employee_id, employee_id)).returning();
+  const res = await db.update(roster_anchors).set({ anchor_date: iso }).where(eq(roster_anchors.employee_id, employee_id)).returning();
   return res
 }
 
