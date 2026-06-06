@@ -24,4 +24,12 @@ export async function updateRosterAnchor({ employee_id, anchor_date }:{employee_
   return res
 }
 
-export default { createRosterAnchor, updateRosterAnchor }
+export async function getAllRosterAnchors() {
+  return await db.select().from(roster_anchors)
+}
+
+export async function getRosterAnchorByEmployeeId(employeeId: number) {
+  return await db.select().from(roster_anchors).where(eq(roster_anchors.employee_id, employeeId))
+}
+
+export default { createRosterAnchor, updateRosterAnchor, getAllRosterAnchors, getRosterAnchorByEmployeeId }
