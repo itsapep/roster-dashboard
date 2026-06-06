@@ -4,6 +4,8 @@ import {
   updateMovementRequest,
   getAllMovementRequests,
   getMovementRequestById,
+  getMovementRequestsByEmployeeId,
+  getPendingMovementRequests,
 } from '../services/movement-request-service'
 
 export async function postHandler(req: NextApiRequest, res: NextApiResponse) {
@@ -51,6 +53,18 @@ export async function putHandler(req: NextApiRequest, res: NextApiResponse) {
 
 export async function getAllHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    const { employee_id, status } = req.query
+
+    if (employee_id) {
+      const data = await getMovementRequestsByEmployeeId(Number(employee_id))
+      return res.status(200).json({ message: 'Success get movement requests by employee id', data })
+    }
+
+    if (status === 'Pending') {
+      const data = await getPendingMovementRequests()
+      return res.status(200).json({ message: 'Success get pending movement requests', data })
+    }
+
     const data = await getAllMovementRequests()
     return res.status(200).json({ message: 'Success get all movement request', data })
   } catch (err) {

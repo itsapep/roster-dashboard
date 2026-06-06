@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createRosterAnchor, updateRosterAnchor } from '../services/roster-anchor-service'
+import { createRosterAnchor, updateRosterAnchor, getAllRosterAnchors, getRosterAnchorByEmployeeId } from '../services/roster-anchor-service'
 
 export async function postHandler(req: NextApiRequest, res: NextApiResponse){
   try{
@@ -23,4 +23,20 @@ export async function putHandler(req: NextApiRequest, res: NextApiResponse){
   }
 }
 
-export default { postHandler, putHandler }
+export async function getAllHandler(req: NextApiRequest, res: NextApiResponse){
+  try{
+    const { employee_id } = req.query
+
+    if (employee_id) {
+      const data = await getRosterAnchorByEmployeeId(Number(employee_id))
+      return res.status(200).json({ message: 'Success get roster anchor by employee id', data })
+    }
+
+    const data = await getAllRosterAnchors()
+    return res.status(200).json({ message: 'Success get all roster anchors', data })
+  }catch(err){
+    return res.status(500).json({ message: 'Error get roster anchors' })
+  }
+}
+
+export default { postHandler, putHandler, getAllHandler }

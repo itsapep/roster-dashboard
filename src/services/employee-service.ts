@@ -20,3 +20,7 @@ export async function createEmployee(data: CreateEmployeeInput) {
 
   return result
 }
+
+export async function getAllEmployees() {
+  return await db.select().from(employees)
+}

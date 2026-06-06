@@ -1,6 +1,6 @@
 import { db } from '../db'
 import { movement_requests, status_history } from '../db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 
 function parseDdMmYyyy(input: string): string {
   if (!/^[0-9]{8}$/.test(input)) throw new Error('invalid date format')
@@ -97,21 +97,47 @@ export async function updateMovementRequest(data: UpdateMovementRequestInput) {
   })
 }
 
+async function attachStatusHistory(requests: Array<{ id: number; [key: string]: unknown }>) {
+  if (requests.length === 0) return []
+
+  const requestIds = requests.map((r) => r.id)
+  const allHistory = await db
+    .select()
+    .from(status_history)
+    .where(inArray(status_history.request_id, requestIds))
+
+  const historyByRequestId = new Map<number, typeof allHistory>()
+  for (const h of allHistory) {
+    const list = historyByRequestId.get(h.request_id) || []
+    list.push(h)
+    historyByRequestId.set(h.request_id, list)
+  }
+
+  return requests.map((request) => ({
+    ...request,
+    status_history: historyByRequestId.get(request.id) || [],
+  }))
+}
+
 export async function getAllMovementRequests() {
   const requests = await db.select().from(movement_requests)
-  
-  // Fetch status_history for each request
-  const requestsWithHistory = await Promise.all(
-    requests.map(async (request) => {
-      const history = await db.select().from(status_history).where(eq(status_history.request_id, request.id))
-      return {
-        ...request,
-        status_history: history,
-      }
-    })
-  )
-  
-  return requestsWithHistory
+  return await attachStatusHistory(requests)
+}
+
+export async function getMovementRequestsByEmployeeId(employeeId: number) {
+  const requests = await db
+    .select()
+    .from(movement_requests)
+    .where(eq(movement_requests.employee_id, employeeId))
+  return await attachStatusHistory(requests)
+}
+
+export async function getPendingMovementRequests() {
+  const requests = await db
+    .select()
+    .from(movement_requests)
+    .where(eq(movement_requests.status, 'Pending'))
+  return await attachStatusHistory(requests)
 }
 
 export async function getMovementRequestById(id: number) {
