@@ -1,38 +1,80 @@
-# Inisiasi Project Next.js dengan Drizzle ORM & PostgreSQL
+# Implementation Plan: Roster Anchor Feature
 
-## Deskripsi Tujuan
-Tugas ini adalah melakukan setup awal (scaffolding) untuk project web baru menggunakan **Next.js** di folder ini. Aplikasi ini akan bergantung pada **Drizzle ORM** untuk manajemen basis data dan **PostgreSQL** sebagai sistem databasenya. 
+## Objective
+Implement a `roster_anchors` table and a corresponding API endpoint to add and update roster anchors. This feature uses Next.js, Drizzle ORM, and PostgreSQL.
 
-Instruksi ini sengaja dibuat *high-level*. Anda dibebaskan untuk menentukan detail implementasi yang paling optimal selama mengikuti kaidah dan *best practices* standar dari teknologi yang digunakan.
+## Folder & File Structure Strategy
+Inside the `src` folder, you must use the following structure:
+- `src/routes/`: Contains Next.js routing logic handlers. Format: `[entity]-route.ts` (e.g., `roster-anchor-route.ts`).
+- `src/services/`: Contains app business logic. Format: `[entity]-service.ts` (e.g., `roster-anchor-service.ts`).
 
-## Tech Stack
-- **Framework:** Next.js (disarankan menggunakan App Router & TypeScript)
-- **Database:** PostgreSQL
-- **ORM:** Drizzle ORM (termasuk Drizzle Kit untuk migrasi)
+*Note for implementor: Ensure you properly link the handler in `src/routes/roster-anchor-route.ts` to the Next.js API routing system (e.g., `src/pages/api/roster-anchor.ts`) so the endpoint is accessible.*
 
-## Daftar Pekerjaan (High-Level Tasks)
+---
 
-### 1. Setup Next.js
-- Inisialisasi project Next.js baru langsung di root folder ini.
-- Aktifkan konfigurasi standar yang umum digunakan (seperti TypeScript, ESLint, dan TailwindCSS).
+## Step 1: Database Schema
 
-### 2. Konfigurasi Database & ORM
-- Install library Drizzle ORM dan driver PostgreSQL yang sesuai (contoh: `postgres` atau `pg`).
-- Setup *environment variables* (file `.env`) untuk menyimpan *connection string* database (`DATABASE_URL`). Pastikan file ini masuk ke dalam `.gitignore`.
-- Buat file konfigurasi Drizzle (`drizzle.config.ts` atau sejenisnya) untuk mengatur direktori schema dan URL database.
+1. **Locate Schema File**: Open the Drizzle schema file (usually `src/db/schema.ts`).
+2. **Define Table**: Add the following `roster_anchors` table:
+   - `id`: Auto-incrementing integer, Primary Key (`serial('id').primaryKey()`).
+   - `employee_id`: Integer, Foreign Key linking to `employees.id` with cascade on delete (`integer('employee_id').references(() => employees.id, { onDelete: 'cascade' })`).
+   - `anchor_date`: Date object (`date('anchor_date')`).
+   - `created_at`: Timestamp, defaults to `current_timestamp` (`timestamp('created_at').defaultNow()`).
+3. **Generate & Run Migrations**:
+   - Run `npm run migrate:generate` to generate SQL migrations.
+   - Run `npm run migrate` to execute the migration against the PostgreSQL database.
 
-### 3. Pembuatan Skema Awal & Koneksi
-- Buat struktur folder yang rapi untuk manajemen database (misalnya `src/db/`).
-- Definisikan *instance* koneksi database.
-- Buat satu skema tabel contoh (contoh: tabel `users` sederhana) sebagai *proof of concept*.
-- Siapkan script di `package.json` untuk menjalankan operasi migrasi (misal: generate schema atau push schema ke database).
+---
 
-### 4. Verifikasi (Testing Koneksi)
-- Lakukan migrasi skema tabel contoh ke database PostgreSQL.
-- Buat satu komponen atau halaman sederhana (bisa menggunakan *Server Component* atau *Server Action*) yang mengambil data dari database tersebut untuk memastikan bahwa *query* via Drizzle ORM berjalan dengan sukses.
+## Step 2: Create the Service (Business Logic)
 
-## Kriteria Penerimaan (Acceptance Criteria)
-- [ ] Project Next.js berhasil berjalan secara lokal tanpa error (`npm run dev`).
-- [ ] Koneksi database ke PostgreSQL berhasil dilakukan.
-- [ ] Migrasi Drizzle (push/generate) bisa dieksekusi melalui terminal.
-- [ ] Terdapat bukti *query* sederhana yang berhasil merender data dari database ke layar.
+1. **Create File**: Create `src/services/roster-anchor-service.ts`.
+2. **Implement Logic**: 
+   - Import the database connection (from `src/db/index.ts`) and the `roster_anchors` schema.
+   - **Create function (`createRosterAnchor`)**:
+     - Accepts an object containing `employee_id` (number) and `anchor_date` (string in `ddmmyyyy` format).
+     - Parses the `anchor_date` string into a valid Date object or ISO string required by the database.
+     - Uses Drizzle ORM to `insert` the data into the `roster_anchors` table.
+   - **Update function (`updateRosterAnchor`)**:
+     - Accepts an object containing `employee_id` and `anchor_date`.
+     - Parses the `anchor_date` string similarly to the create function.
+     - Uses Drizzle ORM to `update` the `roster_anchors` table where the `employee_id` matches the input.
+
+---
+
+## Step 3: Create the Route Handlers
+
+1. **Create File**: Create `src/routes/roster-anchor-route.ts`.
+2. **Implement Handlers**:
+   - Import the service functions (`createRosterAnchor` and `updateRosterAnchor`) from `src/services/roster-anchor-service.ts`.
+   - **POST Handler**:
+     - Extract `employee_id` and `anchor_date` from the `req.body`.
+     - **Request Body Expected:**
+     ```json
+     {
+           "employee_id": 1,
+           "anchor_date": "15102023"
+     }
+     ```
+     - Call `createRosterAnchor` inside a `try...catch` block.
+     - **Success Response** (HTTP 200 or 201): `{ "message": "Success add roster anchor" }`
+     - **Error Response** (HTTP 500): `{ "message": "Error add roster anchor" }`
+   - **PUT Handler**:
+     - Extract `employee_id` and `anchor_date` from the `req.body`.
+     - Call `updateRosterAnchor` inside a `try...catch` block.
+     - **Success Response** (HTTP 200): `{ "message": "Success update roster anchor" }`
+     - **Error Response** (HTTP 500): `{ "message": "Error update roster anchor" }`
+
+---
+
+## Step 4: Expose the API Endpoint
+
+1. **Link to Next.js**: Create the actual endpoint at `/api/roster-anchor`.
+2. **Implementation**:
+   - Create the file `src/pages/api/roster-anchor.ts`.
+   - Import your `postHandler` and `putHandler` from `src/routes/roster-anchor-route.ts`.
+   - Check `req.method`:
+     - If `'POST'`, call the POST handler.
+     - If `'PUT'`, call the PUT handler.
+     - Otherwise, set header `Allow` to `['POST', 'PUT']` and return HTTP 405 `Method Not Allowed`.
+3. **Test the Endpoints**: Send requests to `http://localhost:3000/api/roster-anchor` using tools like Postman or cURL to verify both the `POST` and `PUT` methods are properly responding.
