@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import RosterGrid from '../components/RosterGrid'
+import RequestModal from '../components/RequestModal'
 
 type Employee = {
   id: number
@@ -29,6 +30,7 @@ export default function Page() {
 
   const [employees, setEmployees] = useState<Employee[]>([])
   const [requests, setRequests] = useState<MovementRequest[]>([])
+  const [activeRequest, setActiveRequest] = useState<any | null>(null)
   const [rosterAnchors, setRosterAnchors] = useState<Record<number, string>>({})
   const [approvedRequestsMap, setApprovedRequestsMap] = useState<Record<string, { startDate: Date; endDate: Date }[]>>({})
   const [loading, setLoading] = useState(true)
@@ -90,8 +92,7 @@ export default function Page() {
     fetchRequests()
   }, [fetchRequests])
 
-  // fetch approved movement requests and map by employee id for grid overrides
-  useEffect(() => {
+  const fetchApprovedRequests = useCallback(() => {
     fetch('/api/movement-request?status=Approved')
       .then(res => res.json())
       .then(data => {
@@ -107,6 +108,10 @@ export default function Page() {
       })
       .catch(console.error)
   }, [])
+
+  useEffect(() => {
+    fetchApprovedRequests()
+  }, [fetchApprovedRequests])
 
   const employeesFiltered = selectedDepartment ? employees.filter(e => e.department === selectedDepartment) : employees
 
@@ -165,9 +170,20 @@ export default function Page() {
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {requests.map(r => (
                 <li key={r.id} style={{ padding: '8px 0', borderBottom: '1px solid #eee' }}>
-                  <div><strong>Employee #{r.employee_id}</strong></div>
-                  <div style={{ fontSize: 14, color: '#666' }}>{r.movement_type}</div>
-                  <div style={{ fontSize: 12, color: '#999' }}>{r.start_date} &rarr; {r.end_date}</div>
+                  <button onClick={async () => {
+                    try {
+                      const res = await fetch(`/api/movement-request/${r.id}`)
+                      if (!res.ok) throw new Error('fetch failed')
+                      const data = await res.json()
+                      setActiveRequest(data.data)
+                    } catch (err) {
+                      console.error(err)
+                    }
+                  }} style={{ all: 'unset', cursor: 'pointer' }}>
+                    <div><strong>Employee #{r.employee_id}</strong></div>
+                    <div style={{ fontSize: 14, color: '#666' }}>{r.movement_type}</div>
+                    <div style={{ fontSize: 12, color: '#999' }}>{r.start_date} &rarr; {r.end_date}</div>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -185,6 +201,11 @@ export default function Page() {
           </div>
         </section>
       </div>
+      <RequestModal
+        request={activeRequest}
+        onClose={() => setActiveRequest(null)}
+        onSuccess={() => { fetchRequests(); fetchApprovedRequests() }}
+      />
     </main>
   )
 }
