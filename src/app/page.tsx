@@ -1,6 +1,7 @@
-'use client'
+ 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import RosterGrid from '../components/RosterGrid'
 
 type Employee = {
   id: number
@@ -28,12 +29,27 @@ export default function Page() {
 
   const [employees, setEmployees] = useState<Employee[]>([])
   const [requests, setRequests] = useState<MovementRequest[]>([])
+  const [rosterAnchors, setRosterAnchors] = useState<Record<number, string>>({})
+  const [approvedRequestsMap, setApprovedRequestsMap] = useState<Record<string, { startDate: Date; endDate: Date }[]>>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch('/api/employees')
       .then(res => res.json())
       .then(data => setEmployees(data.data || []))
+      .catch(console.error)
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/roster-anchor')
+      .then(res => res.json())
+      .then(data => {
+        const map: Record<number, string> = {}
+        ;(data.data || []).forEach((r: any) => {
+          if (r.employee_id && r.anchor_date) map[Number(r.employee_id)] = r.anchor_date
+        })
+        setRosterAnchors(map)
+      })
       .catch(console.error)
   }, [])
 
@@ -73,6 +89,26 @@ export default function Page() {
   useEffect(() => {
     fetchRequests()
   }, [fetchRequests])
+
+  // fetch approved movement requests and map by employee id for grid overrides
+  useEffect(() => {
+    fetch('/api/movement-request?status=Approved')
+      .then(res => res.json())
+      .then(data => {
+        const rows: any[] = data.data || []
+        const map: Record<string, { startDate: Date; endDate: Date }[]> = {}
+        rows.forEach(r => {
+          if (!r.employee_id || !r.start_date || !r.end_date) return
+          const key = String(r.employee_id)
+          if (!map[key]) map[key] = []
+          map[key].push({ startDate: new Date(r.start_date), endDate: new Date(r.end_date) })
+        })
+        setApprovedRequestsMap(map)
+      })
+      .catch(console.error)
+  }, [])
+
+  const employeesFiltered = selectedDepartment ? employees.filter(e => e.department === selectedDepartment) : employees
 
   return (
     <main style={{ padding: 24, fontFamily: 'system-ui, sans-serif' }}>
@@ -140,17 +176,12 @@ export default function Page() {
 
         <section style={{ border: '1px solid #e0e0e0', borderRadius: 8, padding: 16 }}>
           <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>Roster Grid</h2>
-          <div style={{
-            border: '2px dashed #ccc',
-            borderRadius: 8,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: 300,
-            color: '#aaa',
-            fontSize: 16,
-          }}>
-            Roster grid placeholder
+          <div>
+            <RosterGrid
+              employeesList={employeesFiltered.map(e => ({ id: String(e.id), name: e.name, anchorDate: new Date(rosterAnchors[e.id] || '2026-01-01') }))}
+              currentViewDate={new Date(currentViewDate)}
+              approvedRequests={Object.fromEntries(Object.entries(approvedRequestsMap).filter(([k]) => employeesFiltered.some(emp => String(emp.id) === k)))}
+            />
           </div>
         </section>
       </div>

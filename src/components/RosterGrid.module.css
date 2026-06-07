@@ -1,0 +1,39 @@
+.gridWrapper {
+  overflow: auto;
+  border: 1px solid #e5e7eb;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+.gridTable {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 900px;
+}
+.gridTh,
+.gridTd {
+  border: 1px solid #e5e7eb;
+  padding: 6px 8px;
+  text-align: center;
+  font-size: 12px;
+}
+.nameCol {
+  position: sticky;
+  left: 0;
+  background: #fff;
+  z-index: 2;
+  text-align: left;
+  min-width: 160px;
+}
+.working {
+  background: #ffffff;
+}
+.dayOff {
+  background: #dbeafe; /* soft blue */
+}
+.swapped {
+  box-shadow: inset 0 0 0 2px rgba(99,102,241,0.25);
+  border-style: dashed;
+}
+.headerDay {
+  background: #f9fafb;
+  font-weight: 600;
+}
