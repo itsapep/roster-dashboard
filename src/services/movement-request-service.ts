@@ -1,6 +1,7 @@
 import { db } from '../db'
-import { movement_requests, status_history } from '../db/schema'
+import { movement_requests, status_history, roster_anchors } from '../db/schema'
 import { eq, inArray, and } from 'drizzle-orm'
+import rosterStatusWithOverride, { ApprovedRequest } from '../utils/roster-util'
 
 function parseDdMmYyyy(input: string): string {
   if (!/^[0-9]{8}$/.test(input)) throw new Error('invalid date format')
@@ -133,6 +134,8 @@ export async function getAllMovementRequests(filters?: { employee_id?: number; s
     .from(movement_requests)
     .where(conditions.length > 0 ? and(...conditions) : undefined)
 
+  
+
   return await attachStatusHistory(requests)
 }
 
@@ -147,4 +150,21 @@ export async function getMovementRequestById(id: number) {
     ...res[0],
     status_history: history,
   }]
+}
+
+export async function getStatusForEmployeeOnDate(employeeId: number, targetDate: Date) {
+  // find anchor for employee
+  const anchorRow = await db.select().from(roster_anchors).where(eq(roster_anchors.employee_id, employeeId))
+  if (!anchorRow || anchorRow.length === 0) return null
+  const anchorDate = new Date(anchorRow[0].anchor_date as string)
+
+  // find any approved movement request for this employee
+  const reqs = await db.select().from(movement_requests).where(eq(movement_requests.employee_id, employeeId))
+  const approved = reqs.find((r: any) => r.status === 'Approved')
+  let approvedReq: ApprovedRequest | undefined
+  if (approved && approved.start_date && approved.end_date) {
+    approvedReq = { startDate: new Date(approved.start_date as string), endDate: new Date(approved.end_date as string) }
+  }
+
+  return rosterStatusWithOverride(targetDate, anchorDate, approvedReq)
 }
