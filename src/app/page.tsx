@@ -92,8 +92,7 @@ export default function Page() {
     fetchRequests()
   }, [fetchRequests])
 
-  // fetch approved movement requests and map by employee id for grid overrides
-  useEffect(() => {
+  const fetchApprovedRequests = useCallback(() => {
     fetch('/api/movement-request?status=Approved')
       .then(res => res.json())
       .then(data => {
@@ -109,6 +108,10 @@ export default function Page() {
       })
       .catch(console.error)
   }, [])
+
+  useEffect(() => {
+    fetchApprovedRequests()
+  }, [fetchApprovedRequests])
 
   const employeesFiltered = selectedDepartment ? employees.filter(e => e.department === selectedDepartment) : employees
 
@@ -201,7 +204,7 @@ export default function Page() {
       <RequestModal
         request={activeRequest}
         onClose={() => setActiveRequest(null)}
-        onSuccess={() => fetchRequests()}
+        onSuccess={() => { fetchRequests(); fetchApprovedRequests() }}
       />
     </main>
   )

@@ -10,11 +10,13 @@ type Props = {
 
 export default function RequestModal({ request, onClose, onSuccess }: Props) {
   const [comment, setComment] = useState('')
+  const [error, setError] = useState('')
   if (!request) return null
 
   const disabled = comment.trim().length === 0
 
   async function submit(action: 'Approved' | 'Rejected') {
+    setError('')
     try {
       const res = await fetch('/api/movement-request', {
         method: 'PUT',
@@ -26,8 +28,7 @@ export default function RequestModal({ request, onClose, onSuccess }: Props) {
       setComment('')
       onClose()
     } catch (err) {
-      console.error(err)
-      // keep modal open on error
+      setError('Failed to update request. Please try again.')
     }
   }
 
@@ -45,6 +46,8 @@ export default function RequestModal({ request, onClose, onSuccess }: Props) {
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Admin Comment</label>
           <textarea value={comment} onChange={e => setComment(e.target.value)} rows={6} style={{ width: '100%', padding: 8 }} />
         </section>
+
+        {error ? <div style={{ color: '#c32', marginBottom: 8 }}>{error}</div> : null}
 
         <section style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <button disabled={disabled} onClick={() => submit('Approved')} style={{ flex: 1, padding: '8px 12px', background: '#0b8457', color: '#fff', border: 'none', borderRadius: 4 }}>Approve</button>
