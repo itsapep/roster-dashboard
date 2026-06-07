@@ -1,6 +1,8 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { postHandler, putHandler, getAllHandler } from '../../src/routes/roster-anchor-route'
-import * as raService from '../../src/services/roster-anchor-service'
+import { db, clearAllTables } from '../helpers/db'
+import { employees, roster_anchors } from '../../src/db/schema'
+import { eq } from 'drizzle-orm'
 
 function createMockRes() {
   const res: any = {}
@@ -17,64 +19,140 @@ function createMockRes() {
   return res
 }
 
-describe('Roster anchor route handlers', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks()
+async function insertTestEmployee(name = 'Test Employee') {
+  const result = await db.insert(employees).values({ name, department: 'Test', role: 'Tester' }).returning()
+  return result[0]
+}
+
+describe('Roster Anchor API', () => {
+  beforeEach(async () => {
+    await clearAllTables()
   })
 
-  it('postHandler - success', async () => {
-    vi.spyOn(raService, 'createRosterAnchor').mockResolvedValue([{}])
+  describe('Get All Roster Anchors', () => {
+    it('Scenario A: Empty State - returns empty array', async () => {
+      const req: any = { query: {} }
+      const res = createMockRes()
 
-    const req: any = { body: { employee_id: 1, anchor_date: '15102023' } }
-    const res = createMockRes()
+      await getAllHandler(req, res)
 
-    await postHandler(req, res)
+      expect(res.status).toHaveBeenCalledWith(200)
+      expect(res._body.data).toEqual([])
+    })
 
-    expect(res.status).toHaveBeenCalledWith(201)
-    expect(res.json).toHaveBeenCalledWith({ message: 'Success add roster anchor' })
+    it('Scenario B: Verify data retrieval - returns all anchors with correct dates', async () => {
+      const emp1 = await insertTestEmployee('Employee 1')
+      const emp2 = await insertTestEmployee('Employee 2')
+
+      await db.insert(roster_anchors).values([
+        { employee_id: emp1.id, anchor_date: '2023-10-15' },
+        { employee_id: emp2.id, anchor_date: '2023-11-20' },
+      ])
+
+      const req: any = { query: {} }
+      const res = createMockRes()
+
+      await getAllHandler(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(200)
+      expect(res._body.data).toHaveLength(2)
+      expect(res._body.data[0]).toMatchObject({
+        employee_id: expect.any(Number),
+        anchor_date: expect.any(String),
+      })
+    })
   })
 
-  it('postHandler - missing fields -> 400', async () => {
-    const req: any = { body: { employee_id: 1 } }
-    const res = createMockRes()
+  describe('Get Roster Anchor By Employee ID', () => {
+    it('Scenario A: Correct association - returns only that employees anchor', async () => {
+      const emp1 = await insertTestEmployee('Employee 1')
+      const emp2 = await insertTestEmployee('Employee 2')
 
-    await postHandler(req, res)
+      await db.insert(roster_anchors).values([
+        { employee_id: emp1.id, anchor_date: '2023-10-15' },
+        { employee_id: emp2.id, anchor_date: '2023-11-20' },
+      ])
 
-    expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({ message: 'Missing fields' })
+      const req: any = { query: { employee_id: String(emp1.id) } }
+      const res = createMockRes()
+
+      await getAllHandler(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(200)
+      expect(res._body.data).toHaveLength(1)
+      expect(res._body.data[0].employee_id).toBe(emp1.id)
+    })
   })
 
-  it('putHandler - success', async () => {
-    vi.spyOn(raService, 'updateRosterAnchor').mockResolvedValue([{}])
+  describe('Create Roster Anchor', () => {
+    it('Scenario A: Valid Input - creates anchor and returns 201', async () => {
+      const emp = await insertTestEmployee()
 
-    const req: any = { body: { employee_id: 1, anchor_date: '15102023' } }
-    const res = createMockRes()
+      const req: any = { body: { employee_id: emp.id, anchor_date: '15102023' } }
+      const res = createMockRes()
 
-    await putHandler(req, res)
+      await postHandler(req, res)
 
-    expect(res.status).toHaveBeenCalledWith(200)
-    expect(res.json).toHaveBeenCalledWith({ message: 'Success update roster anchor' })
+      expect(res.status).toHaveBeenCalledWith(201)
+      expect(res._body.message).toBe('Success add roster anchor')
+
+      const inserted = await db.select().from(roster_anchors).where(eq(roster_anchors.employee_id, emp.id))
+      expect(inserted).toHaveLength(1)
+      expect(inserted[0].anchor_date).toBe('2023-10-15')
+    })
+
+    it('Scenario B: Missing Fields - returns 400', async () => {
+      const req: any = { body: { employee_id: 1 } }
+      const res = createMockRes()
+
+      await postHandler(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(res._body.message).toBe('Missing fields')
+
+      const count = await db.select().from(roster_anchors)
+      expect(count).toHaveLength(0)
+    })
   })
 
-  it('putHandler - missing fields -> 400', async () => {
-    const req: any = { body: { employee_id: 1 } }
-    const res = createMockRes()
+  describe('Update Roster Anchor', () => {
+    it('Scenario A: Valid Update - changes anchor date', async () => {
+      const emp = await insertTestEmployee()
 
-    await putHandler(req, res)
+      await db.insert(roster_anchors).values({
+        employee_id: emp.id,
+        anchor_date: '2023-10-15',
+      })
 
-    expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({ message: 'Missing fields' })
-  })
+      const req: any = { body: { employee_id: emp.id, anchor_date: '20112023' } }
+      const res = createMockRes()
 
-  it('getAllHandler - get by employee id path', async () => {
-    vi.spyOn(raService, 'getRosterAnchorByEmployeeId').mockResolvedValue([{ employee_id: 1 }])
+      await putHandler(req, res)
 
-    const req: any = { query: { employee_id: '1' } }
-    const res = createMockRes()
+      expect(res.status).toHaveBeenCalledWith(200)
+      expect(res._body.message).toBe('Success update roster anchor')
 
-    await getAllHandler(req, res)
+      const updated = await db.select().from(roster_anchors).where(eq(roster_anchors.employee_id, emp.id))
+      expect(updated[0].anchor_date).toBe('2023-11-20')
+    })
 
-    expect(res.status).toHaveBeenCalledWith(200)
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: 'Success get roster anchor by employee id' }))
+    it('Scenario B: Invalid Date Format - returns error', async () => {
+      const emp = await insertTestEmployee()
+
+      await db.insert(roster_anchors).values({
+        employee_id: emp.id,
+        anchor_date: '2023-10-15',
+      })
+
+      const req: any = { body: { employee_id: emp.id, anchor_date: '2023-10-15' } }
+      const res = createMockRes()
+
+      await putHandler(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(500)
+
+      const unchanged = await db.select().from(roster_anchors).where(eq(roster_anchors.employee_id, emp.id))
+      expect(unchanged[0].anchor_date).toBe('2023-10-15')
+    })
   })
 })

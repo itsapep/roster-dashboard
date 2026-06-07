@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "vitest",
+    "test": "vitest --pool=forks --poolOptions.forks.singleFork",
     "migrate": "drizzle-kit migrate",
     "migrate:generate": "drizzle-kit generate",
     "db:seed": "ts-node --compiler-options '{\"module\":\"commonjs\"}' src/db/seed.ts",

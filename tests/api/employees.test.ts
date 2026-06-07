@@ -1,6 +1,8 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { postHandler, getAllHandler } from '../../src/routes/employee-route'
-import * as employeeService from '../../src/services/employee-service'
+import { db, clearAllTables } from '../helpers/db'
+import { employees } from '../../src/db/schema'
+import { eq } from 'drizzle-orm'
 
 function createMockRes() {
   const res: any = {}
@@ -17,58 +19,68 @@ function createMockRes() {
   return res
 }
 
-describe('Employee route handlers', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks()
+describe('Employee API', () => {
+  beforeEach(async () => {
+    await clearAllTables()
   })
 
-  it('postHandler - success', async () => {
-    const createSpy = vi.spyOn(employeeService, 'createEmployee').mockResolvedValue({})
+  describe('Get All Employees', () => {
+    it('Scenario A: Empty State - returns empty array', async () => {
+      const req: any = {}
+      const res = createMockRes()
 
-    const req: any = { body: { name: 'Alice', department: 'Engineering' } }
-    const res = createMockRes()
+      await getAllHandler(req, res)
 
-    await postHandler(req, res)
+      expect(res.status).toHaveBeenCalledWith(200)
+      expect(res._body.data).toEqual([])
+    })
 
-    expect(createSpy).toHaveBeenCalledWith({ name: 'Alice', department: 'Engineering' })
-    expect(res.status).toHaveBeenCalledWith(201)
-    expect(res.json).toHaveBeenCalledWith({ message: 'Success add employee' })
+    it('Scenario B: Populated State - returns all inserted employees', async () => {
+      await db.insert(employees).values([
+        { name: 'Alice', department: 'Engineering', role: 'Engineer' },
+        { name: 'Bob', department: 'HR', role: 'Manager' },
+      ])
+
+      const req: any = {}
+      const res = createMockRes()
+
+      await getAllHandler(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(200)
+      expect(res._body.data).toHaveLength(2)
+      expect(res._body.data[0]).toMatchObject({
+        name: expect.any(String),
+        department: expect.any(String),
+      })
+    })
   })
 
-  it('postHandler - service throws -> 500', async () => {
-    vi.spyOn(employeeService, 'createEmployee').mockRejectedValue(new Error('db error'))
+  describe('Create Employee', () => {
+    it('Scenario A: Valid Input - creates employee and returns 201', async () => {
+      const req: any = { body: { name: 'Charlie', department: 'Engineering' } }
+      const res = createMockRes()
 
-    const req: any = { body: { name: 'Bob', department: 'HR' } }
-    const res = createMockRes()
+      await postHandler(req, res)
 
-    await postHandler(req, res)
+      expect(res.status).toHaveBeenCalledWith(201)
+      expect(res._body.message).toBe('Success add employee')
 
-    expect(res.status).toHaveBeenCalledWith(500)
-    expect(res.json).toHaveBeenCalledWith({ message: 'Error add employee' })
-  })
+      const inserted = await db.select().from(employees).where(eq(employees.name, 'Charlie'))
+      expect(inserted).toHaveLength(1)
+      expect(inserted[0].department).toBe('Engineering')
+    })
 
-  it('getAllHandler - success', async () => {
-    const sample = [{ id: 1, name: 'Alice' }]
-    vi.spyOn(employeeService, 'getAllEmployees').mockResolvedValue(sample)
+    it('Scenario B: Invalid Input (missing fields) - returns 500 and no insertion', async () => {
+      const req: any = { body: { name: 'Dave' } }
+      const res = createMockRes()
 
-    const req: any = {}
-    const res = createMockRes()
+      await postHandler(req, res)
 
-    await getAllHandler(req, res)
+      expect(res.status).toHaveBeenCalledWith(500)
+      expect(res._body.message).toBe('Error add employee')
 
-    expect(res.status).toHaveBeenCalledWith(200)
-    expect(res.json).toHaveBeenCalledWith({ message: 'Success get all employees', data: sample })
-  })
-
-  it('getAllHandler - service throws -> 500', async () => {
-    vi.spyOn(employeeService, 'getAllEmployees').mockRejectedValue(new Error('db error'))
-
-    const req: any = {}
-    const res = createMockRes()
-
-    await getAllHandler(req, res)
-
-    expect(res.status).toHaveBeenCalledWith(500)
-    expect(res.json).toHaveBeenCalledWith({ message: 'Error get all employees' })
+      const count = await db.select().from(employees)
+      expect(count).toHaveLength(0)
+    })
   })
 })
