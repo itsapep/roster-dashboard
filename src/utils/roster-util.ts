@@ -33,28 +33,24 @@ export function isDateInRange(target: Date, start: Date, end: Date) {
 export function rosterStatusWithOverride(
   targetDate: Date,
   anchorDate: Date,
-  approvedRequest?: ApprovedRequest
+  approvedRequests: ApprovedRequest[] = []
 ): RosterStatus {
   const base = baseRosterStatus(targetDate, anchorDate)
-  if (!approvedRequest) return base
 
-  const inRange = isDateInRange(targetDate, approvedRequest.startDate, approvedRequest.endDate)
+  // Rule A: if any approved request covers the target date and base is Working, flip to Day Off
+  for (const req of approvedRequests) {
+    if (isDateInRange(targetDate, req.startDate, req.endDate) && base === 'Working') {
+      return 'Day Off'
+    }
+  }
 
-  if (inRange && base === 'Working') return 'Day Off' // Rule A
-
-  // Rule B: payback only applies within the same 35-day block where the approvedRequest occurred.
-  // Determine the 35-day block containing the approvedRequest.startDate relative to the anchor
-  const reqBlockStartIndex = Math.floor((((daysBetween(approvedRequest.startDate, anchorDate) % 35) + 35) % 35) / 35)
-  // Simpler approach: compute day index for approvedRequest.startDate and targetDate, and only apply payback
-  const reqIndex = ((daysBetween(approvedRequest.startDate, anchorDate) % 35) + 35) % 35
-  const targetIndex = ((daysBetween(targetDate, anchorDate) % 35) + 35) % 35
-
-  if (!inRange && base === 'Day Off') {
-    // If the targetIndex falls within the same 35-day repeating cycle block as the request (i.e., same cycle instance), flip to Working
-    // We'll consider the block as matching when the integer division of daysBetween by 35 is equal for both dates.
-    const reqBlock = Math.floor(daysBetween(approvedRequest.startDate, anchorDate) / 35)
+  // Rule B: payback — if base is Day Off and any request is in the same 35-day block, flip to Working
+  if (base === 'Day Off') {
     const targetBlock = Math.floor(daysBetween(targetDate, anchorDate) / 35)
-    if (reqBlock === targetBlock) return 'Working'
+    for (const req of approvedRequests) {
+      const reqBlock = Math.floor(daysBetween(req.startDate, anchorDate) / 35)
+      if (reqBlock === targetBlock) return 'Working'
+    }
   }
 
   return base

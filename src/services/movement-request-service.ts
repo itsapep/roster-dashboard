@@ -158,13 +158,13 @@ export async function getStatusForEmployeeOnDate(employeeId: number, targetDate:
   if (!anchorRow || anchorRow.length === 0) return null
   const anchorDate = new Date(anchorRow[0].anchor_date as string)
 
-  // find any approved movement request for this employee
+  // find all approved movement requests for this employee
   const reqs = await db.select().from(movement_requests).where(eq(movement_requests.employee_id, employeeId))
-  const approved = reqs.find((r: any) => r.status === 'Approved')
-  let approvedReq: ApprovedRequest | undefined
-  if (approved && approved.start_date && approved.end_date) {
-    approvedReq = { startDate: new Date(approved.start_date as string), endDate: new Date(approved.end_date as string) }
-  }
+  const approvedReqs: ApprovedRequest[] = reqs
+    .filter((r): r is typeof r & { start_date: string; end_date: string } =>
+      r.status === 'Approved' && r.start_date !== null && r.end_date !== null
+    )
+    .map((r) => ({ startDate: new Date(r.start_date), endDate: new Date(r.end_date) }))
 
-  return rosterStatusWithOverride(targetDate, anchorDate, approvedReq)
+  return rosterStatusWithOverride(targetDate, anchorDate, approvedReqs)
 }
