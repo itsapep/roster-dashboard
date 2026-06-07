@@ -44,12 +44,30 @@ export function rosterStatusWithOverride(
     }
   }
 
-  // Rule B: payback — if base is Day Off and any request is in the same 35-day block, flip to Working
+  // Rule B: payback — if base is Day Off and any request is in the same 35-day block, flip to Working day-for-day
   if (base === 'Day Off') {
-    const targetBlock = Math.floor(daysBetween(targetDate, anchorDate) / 35)
+    const targetDiff = daysBetween(targetDate, anchorDate)
+    const targetBlock = Math.floor(targetDiff / 35)
+    const targetMod = ((targetDiff % 35) + 35) % 35
+
+    // Count unique approved days off in the working block (0-27) of this cycle
+    const uniqueApprovedWorkingDays = new Set<string>()
     for (const req of approvedRequests) {
-      const reqBlock = Math.floor(daysBetween(req.startDate, anchorDate) / 35)
-      if (reqBlock === targetBlock) return 'Working'
+      const start = toMidnight(req.startDate)
+      const end = toMidnight(req.endDate)
+      for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+        const diff = daysBetween(d, anchorDate)
+        const block = Math.floor(diff / 35)
+        const mod = ((diff % 35) + 35) % 35
+        if (block === targetBlock && mod >= 0 && mod <= 27) {
+          uniqueApprovedWorkingDays.add(d.toISOString().slice(0, 10))
+        }
+      }
+    }
+
+    const W = uniqueApprovedWorkingDays.size
+    if (targetMod - 28 < W) {
+      return 'Working'
     }
   }
 
@@ -57,3 +75,4 @@ export function rosterStatusWithOverride(
 }
 
 export default rosterStatusWithOverride
+
