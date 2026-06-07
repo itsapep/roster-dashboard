@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 
 type Employee = {
   id: number
@@ -40,9 +40,11 @@ export default function Page() {
   const departments = Array.from(new Set(employees.map(e => e.department))).sort()
   const movementTypes = ['Change Swing', 'Request Leave', 'Temporary Swap']
 
-  const filteredEmployeeIds = selectedDepartment
-    ? employees.filter(e => e.department === selectedDepartment).map(e => e.id)
-    : []
+  const filteredEmployeeIds = useMemo(() => {
+    return selectedDepartment
+      ? employees.filter(e => e.department === selectedDepartment).map(e => e.id)
+      : []
+  }, [selectedDepartment, employees])
 
   const fetchRequests = useCallback(() => {
     setLoading(true)
