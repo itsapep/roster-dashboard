@@ -38,4 +38,20 @@ describe('Roster util', () => {
     // Jan 29 is in block 0, so day 28 (mod 35) which is Day Off -> payback should apply
     expect(rosterStatusWithOverride(d('2026-01-29'), anchor, [req1, req2])).toBe('Working')
   })
+
+  it('keeps total days off in 35-day window exactly 7 under override', () => {
+    const anchor = d('2026-01-01')
+    const approved = [{ startDate: d('2026-01-10'), endDate: d('2026-01-11') }]
+    let offCount = 0
+    for (let i = 0; i < 35; i++) {
+      const target = new Date(anchor)
+      target.setUTCDate(anchor.getUTCDate() + i)
+      const status = rosterStatusWithOverride(target, anchor, approved)
+      if (status === 'Day Off') {
+        offCount++
+      }
+    }
+    expect(offCount).toBe(7)
+  })
 })
+
